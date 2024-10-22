@@ -1,254 +1,332 @@
--- Load Kavo UI Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Lib/main/source.lua"))()
-local Window = Library.CreateLib("MM2 Script", "DarkTheme")
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+
+-- Create the Window
+local Window = Rayfield:CreateWindow({
+    Name = "MM2 Script",
+    LoadingTitle = "MM2 Script Loader",
+    LoadingSubtitle = "by YourName",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "MM2Script", -- You can customize this
+        FileName = "Config"
+    },
+    Discord = {
+        Enabled = true,
+        Invite = "EwARkGncq4", -- Discord invite link
+        RememberJoins = true
+    },
+    KeySystem = false -- Set this to true if you want to add a key system for access
+})
 
 -- Variables
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
-local murder, sheriff, innocent = "Red", "Blue", "White"
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 
 -- Main Tab
-local Main = Window:NewTab("Main")
-local MainSection = Main:NewSection("Main")
+local MainTab = Window:CreateTab("Main") -- Creates Main Tab
 
--- Player Chams (Murder = Red, Innocent = White, Sheriff = Blue)
+-- Player Chams
 local chamsEnabled = false
-MainSection:NewToggle("Player Chams", "Toggles Player Chams (Murder = Red, Innocent = White, Sheriff = Blue)", function(state)
-    chamsEnabled = state
-    for _, v in pairs(Players:GetPlayers()) do
-        local role = v:FindFirstChild("Backpack") and v.Backpack:FindFirstChild("Knife") and "Murder" or (v.Backpack:FindFirstChild("Gun") and "Sheriff") or "Innocent"
-        local color = role == "Murder" and murder or role == "Sheriff" and sheriff or innocent
+MainTab:CreateToggle({
+    Name = "Player Chams (Murder=Red, Sheriff=Blue, Innocent=White)",
+    CurrentValue = false,
+    Flag = "PlayerChams", -- You can use this to save the state of the toggle
+    Callback = function(state)
+        chamsEnabled = state
+        for _, v in pairs(Players:GetPlayers()) do
+            local role = v.Backpack:FindFirstChild("Knife") and "Murder" or (v.Backpack:FindFirstChild("Gun") and "Sheriff") or "Innocent"
+            local color = role == "Murder" and "Red" or role == "Sheriff" and "Blue" or "White"
 
-        for _, part in pairs(v.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                if state then
-                    local cham = Instance.new("BoxHandleAdornment", part)
-                    cham.Adornee = part
-                    cham.Size = part.Size
-                    cham.ZIndex = 10
-                    cham.AlwaysOnTop = true
-                    cham.Color3 = Color3.fromRGB(color == "Red" and 255 or 255, color == "Blue" and 0 or 255, color == "White" and 255 or 255)
-                    cham.Transparency = 0.7
-                else
-                    part:ClearAllChildren() -- Remove chams
+            for _, part in pairs(v.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    if chamsEnabled then
+                        local cham = Instance.new("BoxHandleAdornment", part)
+                        cham.Adornee = part
+                        cham.Size = part.Size
+                        cham.ZIndex = 10
+                        cham.AlwaysOnTop = true
+                        cham.Color3 = Color3.new(role == "Murder" and 1 or 1, role == "Sheriff" and 0 or 1, role == "Innocent" and 1 or 1)
+                        cham.Transparency = 0.7
+                    else
+                        part:ClearAllChildren()
+                    end
                 end
             end
         end
     end
-end)
+})
 
 -- Auto Grab Guns
 local autoGrabGuns = false
-MainSection:NewToggle("Auto Grab Guns", "Automatically grabs guns when near", function(state)
-    autoGrabGuns = state
-    if state then
-        game:GetService("RunService").Stepped:Connect(function()
-            if autoGrabGuns then
-                local gun = Workspace:FindFirstChild("GunDrop")
-                if gun then
-                    player.Character.HumanoidRootPart.CFrame = gun.CFrame
+MainTab:CreateToggle({
+    Name = "Auto Grab Guns",
+    CurrentValue = false,
+    Flag = "AutoGrabGuns",
+    Callback = function(state)
+        autoGrabGuns = state
+        if autoGrabGuns then
+            game:GetService("RunService").Stepped:Connect(function()
+                if autoGrabGuns then
+                    local gun = Workspace:FindFirstChild("GunDrop")
+                    if gun then
+                        player.Character.HumanoidRootPart.CFrame = gun.CFrame
+                    end
                 end
-            end
-        end)
+            end)
+        end
     end
-end)
+})
 
 -- Farms Coin (Bypass Teleport)
 local coinFarm = false
-MainSection:NewToggle("Farms Coin", "Automatically farms coins with teleport bypass", function(state)
-    coinFarm = state
-    if state then
-        game:GetService("RunService").Stepped:Connect(function()
-            if coinFarm then
-                for _, coin in pairs(Workspace:GetChildren()) do
-                    if coin.Name == "Coin" then
-                        -- Tween the player to each coin
-                        local tween = TweenService:Create(player.Character.HumanoidRootPart, TweenInfo.new(0.5), {CFrame = coin.CFrame})
-                        tween:Play()
-                        wait(0.1)
+MainTab:CreateToggle({
+    Name = "Farms Coin (Teleport Bypass)",
+    CurrentValue = false,
+    Flag = "CoinFarm",
+    Callback = function(state)
+        coinFarm = state
+        if coinFarm then
+            game:GetService("RunService").Stepped:Connect(function()
+                if coinFarm then
+                    for _, coin in pairs(Workspace:GetChildren()) do
+                        if coin.Name == "Coin" then
+                            local tween = TweenService:Create(player.Character.HumanoidRootPart, TweenInfo.new(0.5), {CFrame = coin.CFrame})
+                            tween:Play()
+                            wait(0.1)
+                        end
                     end
                 end
-            end
-        end)
-    end
-end)
-
--- Xray
-local xrayEnabled = false
-MainSection:NewToggle("Xray", "Enables X-ray vision", function(state)
-    xrayEnabled = state
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part.Transparency == 0 then
-            part.Transparency = state and 0.7 or 0
+            end)
         end
     end
-end)
+})
+
+-- X-ray Vision
+MainTab:CreateToggle({
+    Name = "Xray Vision",
+    CurrentValue = false,
+    Flag = "Xray",
+    Callback = function(state)
+        for _, part in pairs(Workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.Transparency == 0 then
+                part.Transparency = state and 0.7 or 0
+            end
+        end
+    end
+})
 
 -- Fling Murder
-local flingMurder = false
-MainSection:NewToggle("Fling Murder", "Flings murder player", function(state)
-    flingMurder = state
-    if flingMurder then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Backpack:FindFirstChild("Knife") then
-                v.Character.HumanoidRootPart.Velocity = Vector3.new(0, 500, 0)
+MainTab:CreateToggle({
+    Name = "Fling Murder",
+    CurrentValue = false,
+    Flag = "FlingMurder",
+    Callback = function(state)
+        if state then
+            for _, v in pairs(Players:GetPlayers()) do
+                if v.Backpack:FindFirstChild("Knife") then
+                    v.Character.HumanoidRootPart.Velocity = Vector3.new(0, 500, 0)
+                end
             end
         end
     end
-end)
+})
 
 -- Murder Tab
-local Murder = Window:NewTab("Murder")
-local MurderSection = Murder:NewSection("Murder")
+local MurderTab = Window:CreateTab("Murder")
 
 -- Auto Kill All
-local autoKillAll = false
-MurderSection:NewToggle("Auto Kill All", "Automatically kills all players", function(state)
-    autoKillAll = state
-    if state then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= player then
-                v.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+MurderTab:CreateToggle({
+    Name = "Auto Kill All",
+    CurrentValue = false,
+    Flag = "AutoKillAll",
+    Callback = function(state)
+        if state then
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= player then
+                    v.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+                end
             end
         end
     end
-end)
+})
 
 -- Sheriff Tab
-local Sheriff = Window:NewTab("Sheriff")
-local SheriffSection = Sheriff:NewSection("Sheriff")
+local SheriffTab = Window:CreateTab("Sheriff")
 
 -- Auto Aim Bot
 local autoAimBot = false
-SheriffSection:NewToggle("Auto Aim Bot", "Automatically aims at the murderer", function(state)
-    autoAimBot = state
-    if state then
-        game:GetService("RunService").Stepped:Connect(function()
-            if autoAimBot then
-                for _, v in pairs(Players:GetPlayers()) do
-                    if v.Backpack:FindFirstChild("Knife") then
-                        mouse.Hit = v.Character.HumanoidRootPart.CFrame
+SheriffTab:CreateToggle({
+    Name = "Auto Aim Bot",
+    CurrentValue = false,
+    Flag = "AutoAimBot",
+    Callback = function(state)
+        autoAimBot = state
+        if state then
+            game:GetService("RunService").Stepped:Connect(function()
+                if autoAimBot then
+                    for _, v in pairs(Players:GetPlayers()) do
+                        if v.Backpack:FindFirstChild("Knife") then
+                            mouse.Hit = v.Character.HumanoidRootPart.CFrame
+                        end
                     end
                 end
-            end
-        end)
+            end)
+        end
     end
-end)
+})
 
 -- Aim Rage
-local aimRageValue = 10
-SheriffSection:NewSlider("Aim Rage", "Sets the aim rage value", 10, 100, function(value)
-    aimRageValue = value
-    -- Set aim accuracy (you can adjust the tolerance for aiming at the target based on this value)
-end)
+SheriffTab:CreateSlider({
+    Name = "Aim Rage",
+    Range = {10, 100},
+    Increment = 1,
+    Suffix = "Range",
+    CurrentValue = 10,
+    Flag = "AimRage",
+    Callback = function(value)
+        aimRageValue = value
+        -- Implement aim rage logic based on this value
+    end
+})
 
 -- ESP Tab
-local ESP = Window:NewTab("ESP")
-local ESPSection = ESP:NewSection("ESP")
+local ESPTab = Window:CreateTab("ESP")
 
 -- Gun ESP
-local gunEspEnabled = false
-ESPSection:NewToggle("Gun ESP", "Shows location of the gun", function(state)
-    gunEspEnabled = state
-    if state then
-        local gun = Workspace:FindFirstChild("GunDrop")
-        if gun then
-            local esp = Instance.new("BoxHandleAdornment", gun)
-            esp.Adornee = gun
-            esp.Size = gun.Size
-            esp.AlwaysOnTop = true
-            esp.ZIndex = 10
-            esp.Color3 = Color3.fromRGB(0, 255, 0)
-            esp.Transparency = 0.5
+ESPTab:CreateToggle({
+    Name = "Gun ESP",
+    CurrentValue = false,
+    Flag = "GunESP",
+    Callback = function(state)
+        if state then
+            local gun = Workspace:FindFirstChild("GunDrop")
+            if gun then
+                local esp = Instance.new("BoxHandleAdornment", gun)
+                esp.Adornee = gun
+                esp.Size = gun.Size
+                esp.AlwaysOnTop = true
+                esp.ZIndex = 10
+                esp.Color3 = Color3.fromRGB(0, 255, 0)
+                esp.Transparency = 0.5
+            end
+        else
+            Workspace.GunDrop:ClearAllChildren()
         end
-    else
-        Workspace.GunDrop:ClearAllChildren() -- Clear ESP
     end
-end)
+})
 
 -- Player ESP
-local playerEspEnabled = false
-ESPSection:NewToggle("Player ESP", "Shows ESP on players (same color as Chams)", function(state)
-    playerEspEnabled = state
-    for _, v in pairs(Players:GetPlayers()) do
-        if state then
-            local esp = Instance.new("BillboardGui", v.Character.HumanoidRootPart)
-            esp.Size = UDim2.new(0, 200, 0, 50)
-            esp.AlwaysOnTop = true
+ESPTab:CreateToggle({
+    Name = "Player ESP (Color by Role)",
+    CurrentValue = false,
+    Flag = "PlayerESP",
+    Callback = function(state)
+        for _, v in pairs(Players:GetPlayers()) do
+            if state then
+                local esp = Instance.new("BillboardGui", v.Character.HumanoidRootPart)
+                esp.Size = UDim2.new(0, 200, 0, 50)
+                esp.AlwaysOnTop = true
 
-            local label = Instance.new("TextLabel", esp)
-            label.Size = UDim2.new(0, 200, 0, 50)
-            label.TextColor3 = Color3.fromRGB(v.Backpack:FindFirstChild("Knife") and 255 or v.Backpack:FindFirstChild("Gun") and 0 or 255, v.Backpack:FindFirstChild("Gun") and 0 or 255, 255)
-            label.Text = v.Name
-        else
-            v.Character.HumanoidRootPart:ClearAllChildren() -- Remove ESP
+                local label = Instance.new("TextLabel", esp)
+                label.Size = UDim2.new(0, 200, 0, 50)
+                label.TextColor3 = Color3.new(v.Backpack:FindFirstChild("Knife") and 1 or v.Backpack:FindFirstChild("Gun") and 0 or 1, 0, 1)
+                label.Text = v.Name
+            else
+                v.Character.HumanoidRootPart:ClearAllChildren()
+            end
         end
     end
-end)
+})
 
 -- Players Tab
-local PlayersTab = Window:NewTab("Players")
-local PlayersSection = PlayersTab:NewSection("Players")
+local PlayersTab = Window:CreateTab("Players")
 
 -- WalkSpeed
-local walkSpeed = 16
-PlayersSection:NewSlider("WalkSpeed", "Changes player walkspeed", 10, 1000, function(value)
-    player.Character.Humanoid.WalkSpeed = value
-end)
+PlayersTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {10, 1000},
+    Increment = 10,
+    Suffix = "Speed",
+    CurrentValue = 16,
+    Flag = "WalkSpeed",
+    Callback = function(value)
+        player.Character.Humanoid.WalkSpeed = value
+    end
+})
 
 -- JumpPower
-local jumpPower = 50
-PlayersSection:NewSlider("JumpPower", "Changes player jump power", 10, 1000, function(value)
-    player.Character.Humanoid.JumpPower = value
-end)
+PlayersTab:CreateSlider({
+    Name = "JumpPower",
+    Range = {10, 1000},
+    Increment = 10,
+    Suffix = "Power",
+    CurrentValue = 50,
+    Flag = "JumpPower",
+    Callback = function(value)
+        player.Character.Humanoid.JumpPower = value
+    end
+})
 
 -- Fly
 local flyEnabled = false
-PlayersSection:NewToggle("Fly", "Enables flying", function(state)
-    flyEnabled = state
-    if state then
+PlayersTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Flag = "Fly",
+    Callback = function(state)
+        flyEnabled = state
         local bp = Instance.new("BodyPosition", player.Character.HumanoidRootPart)
-        bp.MaxForce = Vector3.new(5000, 5000, 5000)
-        bp.Position = player.Character.HumanoidRootPart.Position
-
         local bg = Instance.new("BodyGyro", player.Character.HumanoidRootPart)
-        bg.MaxTorque = Vector3.new(5000, 5000, 5000)
+
+        bp.MaxForce = Vector3.new(100000, 100000, 100000)
+        bg.MaxTorque = Vector3.new(100000, 100000, 100000)
 
         game:GetService("RunService").Stepped:Connect(function()
             if flyEnabled then
-                bp.Position = player.Character.HumanoidRootPart.Position + (mouse.Hit.p - player.Character.HumanoidRootPart.Position).unit * 50
+                bp.Position = player.Character.HumanoidRootPart.Position + (player.Character.Humanoid.MoveDirection * 3)
+                bg.CFrame = Workspace.CurrentCamera.CFrame
             else
                 bp:Destroy()
                 bg:Destroy()
             end
         end)
     end
-end)
+})
 
 -- Misc Tab
-local Misc = Window:NewTab("Misc")
-local MiscSection = Misc:NewSection("Misc")
+local MiscTab = Window:CreateTab("Misc")
 
--- Custom Key to Open UI
-MiscSection:NewKeybind("Toggle UI", "Sets a keybind to toggle UI", Enum.KeyCode.F, function()
-    Library:ToggleUI()
-end)
+-- Custom Keybind for UI
+MiscTab:CreateKeybind({
+    Name = "Toggle UI",
+    Key = Enum.KeyCode.F,
+    Callback = function()
+        Rayfield:Toggle()
+    end
+})
 
 -- UI Color Picker
-MiscSection:NewColorPicker("UI Color", "Change the color of the UI", Color3.fromRGB(255, 0, 0), function(color)
-    Library:ChangeColorScheme(color)
-end)
+MiscTab:CreateColorPicker({
+    Name = "UI Color",
+    Color = Color3.fromRGB(255, 0, 0),
+    Callback = function(color)
+        Rayfield:ChangeColorScheme(color)
+    end
+})
 
 -- Copy Discord Link Button
-MiscSection:NewButton("Copy Discord Link", "Copies Discord Link to clipboard", function()
-    setclipboard("https://discord.gg/EwARkGncq4")
-end)
+MiscTab:CreateButton({
+    Name = "Copy Discord Link",
+    Callback = function()
+        setclipboard("https://discord.gg/EwARkGncq4")
+    end
+})
 
--- Initialize and Load
-Library:ToggleUI()
+-- End of Script
+Rayfield:Notify("Loaded!", "The script has been loaded successfully.")
 
 --UI Add
 loadstring(game:HttpGet("https://raw.githubusercontent.com/StarX-exploit/murder-ui/refs/heads/main/ui-star"))()
