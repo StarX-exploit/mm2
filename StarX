@@ -329,4 +329,3 @@ MiscTab:CreateButton({
 Rayfield:Notify("Loaded!", "The script has been loaded successfully.")
 
 --UI Add
-loadstring(game:HttpGet("https://raw.githubusercontent.com/StarX-exploit/murder-ui/refs/heads/main/ui-star"))()
